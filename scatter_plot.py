@@ -26,9 +26,7 @@ def wrap_text(text, width=50):
 
 # --- FILE LOADING LOGIC ---
 # Using the absolute path structure from your environment
-DEFAULT_FILE_PATH = (
-    "/home/kaue.melo/kaue.melo_nfs/streamlit_dashboard/political_compass.csv"
-)
+DEFAULT_FILE_PATH = "political_compass.csv"
 
 # Sidebar for controls
 st.sidebar.header("Data Configuration")
