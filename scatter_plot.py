@@ -10,9 +10,7 @@ st.set_page_config(page_title="3D Political Compass Viewer", layout="wide")
 st.title("Interactive 3D Scatter Plot Dashboard")
 
 # --- 1. Load Data ---
-# Using the older st.cache for pre-1.18 compatibility
-# allow_output_mutation=True prevents Streamlit from throwing warnings if the dataframe is modified
-@st.cache(allow_output_mutation=True)
+@st.cache_data
 def load_local_data(file_path):
     return pd.read_csv(file_path)
 
