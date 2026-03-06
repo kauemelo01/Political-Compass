@@ -1,5 +1,4 @@
 import textwrap
-
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -11,10 +10,11 @@ st.set_page_config(page_title="3D Political Compass Viewer", layout="wide")
 st.title("Interactive 3D Scatter Plot Dashboard")
 
 # --- 1. Load Data ---
-# Reverted to st.cache for compatibility with older Streamlit versions
+# Using the older st.cache for pre-1.18 compatibility
+# allow_output_mutation=True prevents Streamlit from throwing warnings if the dataframe is modified
 @st.cache(allow_output_mutation=True)
-def load_data(file_or_path):
-    return pd.read_csv(file_or_path)
+def load_local_data(file_path):
+    return pd.read_csv(file_path)
 
 
 # --- Helper: Text Wrapper ---
@@ -41,7 +41,8 @@ df = None
 # 1. Try to load the uploaded file first
 if uploaded_file is not None:
     try:
-        df = load_data(uploaded_file)
+        # Read the uploaded file directly. Bypassing the cache completely!
+        df = pd.read_csv(uploaded_file)
         st.sidebar.success("Successfully loaded uploaded file.")
     except Exception as e:
         st.sidebar.error(f"Error reading uploaded file: {e}")
@@ -50,7 +51,8 @@ if uploaded_file is not None:
 # 2. If no upload, try to load the default absolute path
 else:
     try:
-        df = load_data(DEFAULT_FILE_PATH)
+        # Use the cached function ONLY for the local file
+        df = load_local_data(DEFAULT_FILE_PATH)
         st.sidebar.success("Automatically loaded local file.")
     except FileNotFoundError:
         st.info(
