@@ -5,241 +5,229 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# Set page configuration
-st.set_page_config(page_title="4D Political Compass Viewer", layout="wide")
-st.title("4D Political Compass Viewer")
+# --- Page Config ---
+st.set_page_config(
+    page_title="4D Political Compass",
+    layout="wide",
+    initial_sidebar_state="collapsed",  # collapsed by default for mobile
+)
 
-# --- 1. Load Data ---
+# --- Minimal CSS: tighten padding on mobile, style tabs ---
+st.markdown("""
+<style>
+    /* Tighten main padding on small screens */
+    @media (max-width: 768px) {
+        .block-container { padding: 0.5rem 0.75rem 1rem; }
+        .stTabs [data-baseweb="tab"] { font-size: 0.75rem; padding: 6px 8px; }
+        h1 { font-size: 1.3rem !important; }
+    }
+    /* Make number inputs compact */
+    div[data-testid="stNumberInput"] input { font-size: 0.85rem; }
+    /* Remove extra gap above title */
+    .block-container { padding-top: 1rem; }
+</style>
+""", unsafe_allow_html=True)
+
+st.title("4D Political Compass")
+
+# --- Helper: Text Wrapper ---
+def wrap_text(text, width=50):
+    if isinstance(text, str):
+        return "<br>".join(textwrap.wrap(text, width=width))
+    return text
+
+# --- Helper: default column index ---
+def get_index(lst, val):
+    return lst.index(val) if val in lst else 0
+
+# ── DATA LOADING ─────────────────────────────────────────────────────────────
+
+DEFAULT_FILE_PATH = "political_compass.csv"
+
 @st.cache_data
 def load_local_data(file_path):
     return pd.read_csv(file_path)
 
-# --- Helper: Text Wrapper ---
-def wrap_text(text, width=50):
-    if isinstance(text, str): return "<br>".join(textwrap.wrap(text, width=width))
-    return text
-
-# --- FILE LOADING LOGIC ---
-DEFAULT_FILE_PATH = "political_compass.csv"
-st.sidebar.header("Data Configuration")
-uploaded_file = st.sidebar.file_uploader("Upload your CSV (Overrides default)", type=["csv"])
 df = None
 
-# 1. Try to load the uploaded file first
+# File uploader lives in a compact expander so it doesn't dominate the screen
+with st.expander("📂 Data Source", expanded=False):
+    uploaded_file = st.file_uploader("Upload CSV (overrides default)", type=["csv"])
+
 if uploaded_file is not None:
-    try:  # Read the uploaded file directly by bypassing the cache
+    try:
         df = pd.read_csv(uploaded_file)
-        st.sidebar.success("Successfully loaded uploaded file.")
+        st.success("Loaded uploaded file.", icon="✅")
     except Exception as e:
-        st.sidebar.error(f"Error reading uploaded file: {e}")
+        st.error(f"Error reading file: {e}")
+        st.stop()
+else:
+    try:
+        df = load_local_data(DEFAULT_FILE_PATH)
+    except FileNotFoundError:
+        st.info(f"No local **{DEFAULT_FILE_PATH}** found. Upload a CSV above to continue.")
         st.stop()
 
-else:  # 2. If no upload, try to load the default absolute path
-    try:  # Use the cached function only for the local file
-        df = load_local_data(DEFAULT_FILE_PATH)
-        st.sidebar.success("Automatically loaded local file.")
-    except FileNotFoundError:
-        st.info(f"Could not find **{DEFAULT_FILE_PATH}**. Please upload a CSV file to continue.")
-        st.stop()  # Stops the app from crashing while waiting for a file
+# ── CONTROLS (tabbed layout — works great on mobile) ─────────────────────────
 
-# --- MAIN DASHBOARD LOGIC ---
 if df is not None:
-    # --- 2. Axis Selection ---
     numeric_cols = df.select_dtypes(include=["float", "int"]).columns.tolist()
     all_cols = df.columns.tolist()
-
-    def get_index(lst, val):
-        return lst.index(val) if val in lst else 0
 
     x_def = numeric_cols[0] if len(numeric_cols) > 0 else None
     y_def = numeric_cols[1] if len(numeric_cols) > 1 else None
     z_def = numeric_cols[2] if len(numeric_cols) > 2 else None
 
-    st.sidebar.subheader("Axis Mapping")
-    x_axis = st.sidebar.selectbox("X-Axis", numeric_cols, index=get_index(numeric_cols, x_def))
-    y_axis = st.sidebar.selectbox("Y-Axis", numeric_cols, index=get_index(numeric_cols, y_def))
-    z_axis = st.sidebar.selectbox("Z-Axis", numeric_cols, index=get_index(numeric_cols, z_def))
+    # Four tabs replace the sidebar
+    tab_axes, tab_filter, tab_display, tab_data = st.tabs(
+        ["📐 Axes", "🔍 Filter", "🎨 Display", "📋 Data"]
+    )
 
-    color_col = st.sidebar.selectbox("Color Dimension", all_cols, index=0)
+    # ── Tab 1: Axes ───────────────────────────────────────────────────────────
+    with tab_axes:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            x_axis = st.selectbox("X-Axis", numeric_cols, index=get_index(numeric_cols, x_def))
+        with col2:
+            y_axis = st.selectbox("Y-Axis", numeric_cols, index=get_index(numeric_cols, y_def))
+        with col3:
+            z_axis = st.selectbox("Z-Axis", numeric_cols, index=get_index(numeric_cols, z_def))
 
-    # --- 3. Filter Octants ---
-    st.sidebar.subheader("Filter Octants")
+        color_col = st.selectbox("Color by", all_cols, index=0)
+        label_col = st.selectbox("Label column", all_cols, index=0)
 
-    octant_options = [
-        "All Data",
-        "+X +Y +Z (Top-Right-Front)",
-        "-X +Y +Z (Top-Left-Front)",
-        "-X -Y +Z (Bottom-Left-Front)",
-        "+X -Y +Z (Bottom-Right-Front)",
-        "+X +Y -Z (Top-Right-Back)",
-        "-X +Y -Z (Top-Left-Back)",
-        "-X -Y -Z (Bottom-Left-Back)",
-        "+X -Y -Z (Bottom-Right-Back)",
-    ]
+    # ── Tab 2: Filter ─────────────────────────────────────────────────────────
+    with tab_filter:
+        # Octant filter
+        octant_options = [
+            "All Data",
+            "+X +Y +Z", "-X +Y +Z", "-X -Y +Z", "+X -Y +Z",
+            "+X +Y -Z", "-X +Y -Z", "-X -Y -Z", "+X -Y -Z",
+        ]
+        selected_octant = st.selectbox("Octant / Region", octant_options)
 
-    selected_octant = st.sidebar.selectbox("Select Region", octant_options)
+        st.divider()
 
-    # Apply Octant Filtering
+        # Dynamic column filter
+        filter_col = st.selectbox("Filter by column", ["None"] + all_cols)
+
+        if filter_col != "None":
+            if pd.api.types.is_numeric_dtype(df[filter_col]):
+                min_val = float(df[filter_col].min())
+                max_val = float(df[filter_col].max())
+                step = (max_val - min_val) / 100 if max_val > min_val else 0.1
+                rng = st.slider(f"{filter_col} range", min_val, max_val, (min_val, max_val), step=step)
+            else:
+                unique_vals = df[filter_col].unique().tolist()
+                selected_vals = st.multiselect(f"{filter_col} values", unique_vals, default=unique_vals)
+
+    # ── Tab 3: Display ────────────────────────────────────────────────────────
+    with tab_display:
+        col_a, col_b = st.columns(2)
+        with col_a:
+            axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
+            dot_size  = st.slider("Dot size", 1, 20, 5)
+        with col_b:
+            axis_max   = st.number_input("Axis Max", value=1.0, step=0.1)
+            text_size  = st.slider("Text size", 6, 24, 10)
+
+        show_walls  = st.checkbox("Show zero-planes (octant walls)", value=True)
+
+        # Chart height — key for mobile: portrait screens need a shorter plot
+        chart_height = st.slider("Chart height (px)", 350, 900, 520, step=10)
+
+    # ── Tab 4: Raw data ───────────────────────────────────────────────────────
+    with tab_data:
+        st.caption("Filtered data will appear here after applying settings.")
+        show_raw = st.checkbox("Show raw data table", value=False)
+
+    # ── Apply filters ─────────────────────────────────────────────────────────
+    df_filtered = df.copy()
+
+    # Octant
     if selected_octant != "All Data":
         show_pos_x = "+X" in selected_octant
         show_pos_y = "+Y" in selected_octant
         show_pos_z = "+Z" in selected_octant
+        df_filtered = df_filtered[df_filtered[x_axis] >= 0] if show_pos_x else df_filtered[df_filtered[x_axis] < 0]
+        df_filtered = df_filtered[df_filtered[y_axis] >= 0] if show_pos_y else df_filtered[df_filtered[y_axis] < 0]
+        df_filtered = df_filtered[df_filtered[z_axis] >= 0] if show_pos_z else df_filtered[df_filtered[z_axis] < 0]
 
-        if show_pos_x: df = df[df[x_axis] >= 0]
-        else: df = df[df[x_axis] < 0]
-
-        if show_pos_y: df = df[df[y_axis] >= 0]
-        else: df = df[df[y_axis] < 0]
-
-        if show_pos_z: df = df[df[z_axis] >= 0]
-        else: df = df[df[z_axis] < 0]
-
-    # --- 4. Dynamic Column Filter ---
-    st.sidebar.subheader("Dynamic Data Filter")
-
-    # Add "None" as the first option so filtering is optional
-    filter_col = st.sidebar.selectbox("Filter by Column", ["None"] + all_cols)
-
+    # Column filter
     if filter_col != "None":
-        # Check if column is numeric
         if pd.api.types.is_numeric_dtype(df[filter_col]):
-            min_val = float(df[filter_col].min())
-            max_val = float(df[filter_col].max())
-            
-            # Ensure step is non-zero
-            step = (max_val - min_val) / 100 if max_val > min_val else 0.1
+            df_filtered = df_filtered[(df_filtered[filter_col] >= rng[0]) & (df_filtered[filter_col] <= rng[1])]
+        else:
+            df_filtered = df_filtered[df_filtered[filter_col].isin(selected_vals)]
 
-            # Create a double-ended slider
-            rng = st.sidebar.slider(
-                f"Range for {filter_col}",
-                min_val,
-                max_val,
-                (min_val, max_val),
-                step=step,
+    # ── Build Plot ────────────────────────────────────────────────────────────
+    st.divider()
+
+    if not (x_axis and y_axis and z_axis):
+        st.warning("Please select axes in the Axes tab.")
+    elif len(df_filtered) == 0:
+        st.warning("No data matches the current filters.")
+    else:
+        df_plot = df_filtered.copy()
+
+        # Wrap hover text
+        for col in all_cols:
+            if col in df_plot.columns and df_plot[col].dtype == object:
+                df_plot[col] = df_plot[col].apply(lambda x: wrap_text(x, width=50))
+
+        fig = px.scatter_3d(
+            df_plot,
+            x=x_axis, y=y_axis, z=z_axis,
+            color=color_col,
+            text=label_col,
+            hover_data=all_cols,
+            title=f"{x_axis}  ×  {y_axis}  ×  {z_axis}",
+        )
+
+        # Zero-plane walls
+        if show_walls:
+            wall_kwargs = dict(
+                color="gray", opacity=0.18, hoverinfo="skip",
+                i=[0, 0], j=[1, 2], k=[2, 3],
             )
-            df = df[(df[filter_col] >= rng[0]) & (df[filter_col] <= rng[1])]
+            lo, hi = axis_min, axis_max
+            fig.add_trace(go.Mesh3d(x=[0,0,0,0], y=[lo,hi,hi,lo], z=[lo,lo,hi,hi], name="X=0", **wall_kwargs))
+            fig.add_trace(go.Mesh3d(x=[lo,hi,hi,lo], y=[0,0,0,0], z=[lo,lo,hi,hi], name="Y=0", **wall_kwargs))
+            fig.add_trace(go.Mesh3d(x=[lo,hi,hi,lo], y=[lo,lo,hi,hi], z=[0,0,0,0], name="Z=0", **wall_kwargs))
 
-        else:  # Categorical/Text column
-            unique_vals = df[filter_col].unique().tolist()
-            selected_vals = st.sidebar.multiselect(
-                f"Select values for {filter_col}",
-                unique_vals,
-                default=unique_vals,
-            )
-            df = df[df[filter_col].isin(selected_vals)]
+        fig.update_traces(
+            marker=dict(size=dot_size),
+            textposition="top center",
+            textfont=dict(size=text_size, color="black"),
+            mode="markers+text",
+            selector=dict(type="scatter3d"),
+        )
 
-    # --- 5. Label Settings ---
-    st.sidebar.subheader("Label Settings")
-    label_col = st.sidebar.selectbox("Label Column (Text)", all_cols, index=0)
-    text_size = st.sidebar.slider("Text Size", min_value=6, max_value=24, value=10)
+        fig.update_layout(
+            height=chart_height,
+            scene=dict(
+                xaxis=dict(title=dict(text=x_axis, font=dict(size=10)), range=[axis_min, axis_max]),
+                yaxis=dict(title=dict(text=y_axis, font=dict(size=10)), range=[axis_min, axis_max]),
+                zaxis=dict(title=dict(text=z_axis, font=dict(size=10)), range=[axis_min, axis_max]),
+                aspectmode="cube",
+                # Slightly adjusted default camera angle — better on portrait screens
+                camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
+            ),
+            margin=dict(l=0, r=0, b=0, t=36),
+            legend=dict(
+                orientation="h",       # horizontal legend — saves vertical space on mobile
+                yanchor="bottom", y=1.01,
+                xanchor="right",  x=1,
+                font=dict(size=9),
+            ),
+        )
 
-    # --- 6. Graph Range & Walls ---
-    st.sidebar.subheader("Graph Range & Walls")
-    col1, col2 = st.sidebar.columns(2)
+        st.plotly_chart(fig, use_container_width=True)
 
-    with col1: axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
-    with col2: axis_max = st.number_input("Axis Max", value=1.0, step=0.1)
+        # Raw data (optional)
+        if show_raw:
+            with tab_data:
+                st.dataframe(df_filtered, use_container_width=True)
 
-    show_walls = st.sidebar.checkbox("Show Zero Walls (Quadrants)", value=True)
-    dot_size = st.sidebar.slider("Dot Size", 1, 20, 5)
-
-    # Define hover data: default to all columns
-    hover_data = all_cols
-
-    # --- 7. Data Preparation ---
-    df_plot = df.copy()
-
-    # Apply text wrapping to all hover columns if they are strings
-    for col in hover_data:
-        if col in df_plot.columns and df_plot[col].dtype == object:
-            df_plot[col] = df_plot[col].apply(lambda x: wrap_text(x, width=50))
-
-    # --- 8. Generate Plot ---
-    if x_axis and y_axis and z_axis:
-        if len(df_plot) == 0:
-            st.warning("No data found with the current filters.")
-        
-        else:  # 8a. Create Base Scatter
-            fig = px.scatter_3d(
-                df_plot,
-                x=x_axis,
-                y=y_axis,
-                z=z_axis,
-                color=color_col,
-                text=label_col,
-                hover_data=hover_data,
-                title=f"3D Scatter: {x_axis} vs {y_axis} vs {z_axis}",
-            )
-
-            # 8b. Add Zero Walls
-            if show_walls:
-                i_idx = [0, 0]
-                j_idx = [1, 2]
-                k_idx = [2, 3]
-
-                # Wall Style
-                wall_style = dict(
-                    color="gray",
-                    opacity=0.2,
-                    hoverinfo="skip",
-                    i=i_idx,
-                    j=j_idx,
-                    k=k_idx,
-                )
-
-                # X=0 Plane
-                fig.add_trace(
-                    go.Mesh3d(
-                        x=[0, 0, 0, 0],
-                        y=[axis_min, axis_max, axis_max, axis_min],
-                        z=[axis_min, axis_min, axis_max, axis_max],
-                        **wall_style,
-                        name="X=0",
-                    )
-                )
-
-                # Y=0 Plane
-                fig.add_trace(
-                    go.Mesh3d(
-                        x=[axis_min, axis_max, axis_max, axis_min],
-                        y=[0, 0, 0, 0],
-                        z=[axis_min, axis_min, axis_max, axis_max],
-                        **wall_style,
-                        name="Y=0",
-                    )
-                )
-
-                # Z=0 Plane
-                fig.add_trace(
-                    go.Mesh3d(
-                        x=[axis_min, axis_max, axis_max, axis_min],
-                        y=[axis_min, axis_min, axis_max, axis_max],
-                        z=[0, 0, 0, 0],
-                        **wall_style,
-                        name="Z=0",
-                    )
-                )
-
-            # 8c. Update Layout
-            fig.update_traces(
-                marker=dict(size=dot_size),
-                textposition="top center",
-                textfont=dict(size=text_size, color="black"),
-                mode="markers+text",
-                selector=dict(type="scatter3d"),
-            )
-
-            fig.update_layout(
-                scene=dict(
-                    xaxis=dict(title=x_axis, range=[axis_min, axis_max]),
-                    yaxis=dict(title=y_axis, range=[axis_min, axis_max]),
-                    zaxis=dict(title=z_axis, range=[axis_min, axis_max]),
-                    aspectmode="cube",
-                ),
-                margin=dict(l=0, r=0, b=0, t=40),
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Show filtered raw data
-            with st.expander("View Raw Data"): st.dataframe(df)
+    # ── Footer ─────────────────────────────────────────────────────────────────
+    st.caption(f"Showing **{len(df_filtered)}** of **{len(df)}** entries")
