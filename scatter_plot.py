@@ -93,7 +93,7 @@ if df is not None:
         with col3:
             z_axis = st.selectbox("Z-Axis", numeric_cols, index=get_index(numeric_cols, z_def))
 
-        color_col = st.selectbox("Color by", all_cols, index=0)
+        color_col = st.selectbox("Color by", all_cols, index=get_index(all_cols, "Reformist_Revolutionary"))
         label_col = st.selectbox("Label column", all_cols, index=0)
 
     # ── Tab 2: Filter ─────────────────────────────────────────────────────────
@@ -213,7 +213,16 @@ if df is not None:
                 # Slightly adjusted default camera angle — better on portrait screens
                 camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
             ),
-            margin=dict(l=0, r=0, b=0, t=36),
+            margin=dict(l=0, r=0, b=80, t=36),
+            coloraxis_colorbar=dict(
+                orientation="h",       # horizontal bar below the chart
+                x=0.5, xanchor="center",
+                y=-0.12, yanchor="top",
+                len=0.6,               # 60% of plot width
+                thickness=12,
+                title=dict(side="bottom", font=dict(size=9)),
+                tickfont=dict(size=8),
+            ),
             legend=dict(
                 orientation="h",       # horizontal legend — saves vertical space on mobile
                 yanchor="bottom", y=1.01,
