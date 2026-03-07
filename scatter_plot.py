@@ -141,6 +141,7 @@ if df is not None:
             text_size  = st.slider("Text size", 6, 24, 10)
 
         show_walls  = st.checkbox("Show zero-planes (octant walls)", value=True)
+        dark_mode   = st.checkbox("Dark mode (white text)", value=False)
 
         # Chart height — key for mobile: portrait screens need a shorter plot
         chart_height = st.slider("Chart height (px)", 350, 900, 520, step=10)
@@ -204,10 +205,12 @@ if df is not None:
             fig.add_trace(go.Mesh3d(x=[lo,hi,hi,lo], y=[0,0,0,0], z=[lo,lo,hi,hi], name="Y=0", **wall_kwargs))
             fig.add_trace(go.Mesh3d(x=[lo,hi,hi,lo], y=[lo,lo,hi,hi], z=[0,0,0,0], name="Z=0", **wall_kwargs))
 
+        text_color = "white" if dark_mode else "black"
+
         fig.update_traces(
             marker=dict(size=dot_size),
             textposition="top center",
-            textfont=dict(size=text_size, color="black"),
+            textfont=dict(size=text_size, color=text_color),
             mode="markers+text",
             selector=dict(type="scatter3d"),
         )
@@ -215,9 +218,9 @@ if df is not None:
         fig.update_layout(
             height=chart_height,
             scene=dict(
-                xaxis=dict(title=dict(text=x_axis, font=dict(size=10)), range=[axis_min, axis_max]),
-                yaxis=dict(title=dict(text=y_axis, font=dict(size=10)), range=[axis_min, axis_max]),
-                zaxis=dict(title=dict(text=z_axis, font=dict(size=10)), range=[axis_min, axis_max]),
+                xaxis=dict(title=dict(text=x_axis, font=dict(size=10, color=text_color)), tickfont=dict(color=text_color), range=[axis_min, axis_max]),
+                yaxis=dict(title=dict(text=y_axis, font=dict(size=10, color=text_color)), tickfont=dict(color=text_color), range=[axis_min, axis_max]),
+                zaxis=dict(title=dict(text=z_axis, font=dict(size=10, color=text_color)), tickfont=dict(color=text_color), range=[axis_min, axis_max]),
                 aspectmode="cube",
                 # Slightly adjusted default camera angle — better on portrait screens
                 camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
@@ -264,5 +267,6 @@ if df is not None:
         if show_raw:
             with tab_data:
                 st.dataframe(df_filtered, use_container_width=True)
+
     # ── Footer ─────────────────────────────────────────────────────────────────
     st.caption(f"Showing **{len(df_filtered)}** of **{len(df)}** entries")
