@@ -264,6 +264,5 @@ if df is not None:
         if show_raw:
             with tab_data:
                 st.dataframe(df_filtered, use_container_width=True)
-
     # ── Footer ─────────────────────────────────────────────────────────────────
     st.caption(f"Showing **{len(df_filtered)}** of **{len(df)}** entries")
