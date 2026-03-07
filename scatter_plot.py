@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 
 # --- Page Config ---
 st.set_page_config(
@@ -241,14 +240,19 @@ if df is not None:
             ),
         )
 
-        # Render as raw HTML so Plotly owns the touch events directly —
-        # st.plotly_chart wraps in an iframe that intercepts pinch gestures.
-        chart_html = fig.to_html(
-            include_plotlyjs="cdn",
-            full_html=True,
-            config={"scrollZoom": True, "responsive": True},
-        )
-        components.html(chart_html, height=chart_height + 60, scrolling=False)
+        # Unlock touch/pinch events on Streamlit's plotly iframe
+        st.markdown("""
+        <style>
+        iframe[title="streamlit_plotly_chart"] {
+            touch-action: auto !important;
+        }
+        div[data-testid="stPlotlyChart"] iframe {
+            touch-action: auto !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "responsive": True})
 
         # Raw data (optional)
         if show_raw:
