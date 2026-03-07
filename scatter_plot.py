@@ -240,19 +240,25 @@ if df is not None:
             ),
         )
 
-        # Unlock touch/pinch events on Streamlit's plotly iframe
-        st.markdown("""
-        <style>
-        iframe[title="streamlit_plotly_chart"] {
-            touch-action: auto !important;
-        }
-        div[data-testid="stPlotlyChart"] iframe {
-            touch-action: auto !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
         st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "responsive": True})
+
+        # ── Mobile pinch-to-zoom: open standalone HTML in browser ────────────
+        # Streamlit's iframe is sandboxed at browser level — no CSS or config
+        # flag can enable pinch gestures through it. The only reliable fix is a
+        # self-contained HTML file opened directly in the mobile browser.
+        standalone_html = fig.to_html(
+            include_plotlyjs=True,   # fully self-contained, no CDN needed
+            full_html=True,
+            config={"scrollZoom": True, "responsive": True},
+        )
+        st.download_button(
+            label="📱 Open in browser (enables pinch-to-zoom)",
+            data=standalone_html,
+            file_name="political_compass.html",
+            mime="text/html",
+            help="Download and open this file in your mobile browser for full pinch-to-zoom support.",
+            use_container_width=True,
+        )
 
         # Raw data (optional)
         if show_raw:
