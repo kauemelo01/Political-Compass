@@ -8,7 +8,7 @@ A data project mapping political ideologies, philosophies, schools of thought, a
 
 Most political compasses flatten complex traditions into one or two dimensions, forcing false proximities and obscuring genuine distinctions. This project attempts a richer mapping by scoring each entry on four orthogonal axes derived from the history of political philosophy. The goal is not to rank or judge, but to make visible the structural relationships — and surprising distances — between traditions that are often lazily grouped together.
 
-The dataset (`political_compass.xlsx`) contains entries ranging from ancient philosophies to contemporary emerging movements, each scored from **-1.0 to +1.0** on all four dimensions.
+The dataset (`political_compass.csv`) contains entries ranging from ancient philosophies to contemporary emerging movements, each scored from **-1.0 to +1.0** on all four dimensions.
 
 ---
 
@@ -79,7 +79,7 @@ A contemporary political paradigm or phenomenon that is currently active, evolvi
 
 ## Data Structure
 
-The dataset (`political_compass.xlsx`) has the following columns:
+The dataset (`political_compass.csv`) has the following columns:
 
 | Column | Type | Description |
 |---|---|---|
