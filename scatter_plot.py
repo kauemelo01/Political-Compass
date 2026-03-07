@@ -7,7 +7,7 @@ import streamlit as st
 
 # Set page configuration
 st.set_page_config(page_title="3D Political Compass Viewer", layout="wide")
-st.title("Interactive 3D Scatter Plot Dashboard")
+st.title("st.set_page_config(page_title="3D Political Compass Viewer")
 
 # --- 1. Load Data ---
 @st.cache_data
