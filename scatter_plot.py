@@ -14,11 +14,13 @@ st.title("4D Political Compass Viewer")
 def load_local_data(file_path):
     return pd.read_csv(file_path)
 
+
 # --- Helper: Text Wrapper ---
 def wrap_text(text, width=50):
     if isinstance(text, str):
         return "<br>".join(textwrap.wrap(text, width=width))
     return text
+
 
 # --- FILE LOADING LOGIC ---
 DEFAULT_FILE_PATH = "political_compass.csv"
@@ -26,11 +28,12 @@ DEFAULT_FILE_PATH = "political_compass.csv"
 # Sidebar for controls
 st.sidebar.header("Data Configuration")
 uploaded_file = st.sidebar.file_uploader("Upload your CSV (Overrides default)", type=["csv"])
+
 df = None
 
 # 1. Try to load the uploaded file first
 if uploaded_file is not None:
-    try:  # Read the uploaded file directly by bypassing the cache
+    try:  # Read the uploaded file directly by bypassing the cache completely
         df = pd.read_csv(uploaded_file)
         st.sidebar.success("Successfully loaded uploaded file.")
     except Exception as e:
@@ -39,7 +42,7 @@ if uploaded_file is not None:
 
 # 2. If no upload, try to load the default absolute path
 else:
-    try:  # Use the cached function only for the local file
+    try:  # Use the cached function ONLY for the local file
         df = load_local_data(DEFAULT_FILE_PATH)
         st.sidebar.success("Automatically loaded local file.")
     except FileNotFoundError:
@@ -122,7 +125,7 @@ if df is not None:
                 step=step,
             )
             df = df[(df[filter_col] >= rng[0]) & (df[filter_col] <= rng[1])]
-        
+
         else:
             # Categorical/Text column
             unique_vals = df[filter_col].unique().tolist()
@@ -143,13 +146,13 @@ if df is not None:
     col1, col2 = st.sidebar.columns(2)
 
     with col1: axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
-    with col2: axis_max = st.number_input("Axis Max", value= 1.0, step=0.1)
+    with col2: axis_max = st.number_input("Axis Max", value=1.0, step=0.1)
 
     show_walls = st.sidebar.checkbox("Show Zero Walls (Quadrants)", value=True)
+    dot_size = st.sidebar.slider("Dot Size", 1, 20, 5)
 
-    # --- 6b. Define hover data (exclude already-mapped axes) ---
-    mapped_cols = {x_axis, y_axis, z_axis, color_col, label_col}
-    hover_data = [col for col in all_cols if col not in mapped_cols]
+    # Define hover data. By default, show all columns. You can customize this to show only specific columns.
+    hover_data = all_cols
 
     # --- 7. Data Preparation ---
     df_plot = df.copy()
