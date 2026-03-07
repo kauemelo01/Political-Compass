@@ -6,14 +6,13 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # Set page configuration
-st.set_page_config(page_title="3D Political Compass Viewer", layout="wide")
-st.title("Interactive 3D Scatter Plot Dashboard")
+st.set_page_config(page_title="4D Political Compass Viewer", layout="wide")
+st.title("4D Political Compass Viewer")
 
 # --- 1. Load Data ---
 @st.cache_data
 def load_local_data(file_path):
     return pd.read_csv(file_path)
-
 
 # --- Helper: Text Wrapper ---
 def wrap_text(text, width=50):
@@ -21,40 +20,31 @@ def wrap_text(text, width=50):
         return "<br>".join(textwrap.wrap(text, width=width))
     return text
 
-
 # --- FILE LOADING LOGIC ---
-# Using the absolute path structure from your environment
 DEFAULT_FILE_PATH = "political_compass.csv"
 
 # Sidebar for controls
 st.sidebar.header("Data Configuration")
-uploaded_file = st.sidebar.file_uploader(
-    "Upload your CSV (Overrides default)", type=["csv"]
-)
-
+uploaded_file = st.sidebar.file_uploader("Upload your CSV (Overrides default)", type=["csv"])
 df = None
 
 # 1. Try to load the uploaded file first
 if uploaded_file is not None:
     try:
-        # Read the uploaded file directly. Bypassing the cache completely!
         df = pd.read_csv(uploaded_file)
         st.sidebar.success("Successfully loaded uploaded file.")
     except Exception as e:
         st.sidebar.error(f"Error reading uploaded file: {e}")
         st.stop()
 
-# 2. If no upload, try to load the default absolute path
+# 2. If no upload, try to load the default local file
 else:
     try:
-        # Use the cached function ONLY for the local file
         df = load_local_data(DEFAULT_FILE_PATH)
         st.sidebar.success("Automatically loaded local file.")
     except FileNotFoundError:
-        st.info(
-            f"Could not find **{DEFAULT_FILE_PATH}**. Please upload a CSV file to continue."
-        )
-        st.stop()  # Stops the app from crashing while waiting for a file
+        st.info(f"Could not find **{DEFAULT_FILE_PATH}**. Please upload a CSV file to continue.")
+        st.stop()
 
 # --- MAIN DASHBOARD LOGIC ---
 if df is not None:
@@ -117,18 +107,14 @@ if df is not None:
     # --- 4. Dynamic Column Filter ---
     st.sidebar.subheader("Dynamic Data Filter")
 
-    # Add "None" as the first option so filtering is optional
     filter_col = st.sidebar.selectbox("Filter by Column", ["None"] + all_cols)
 
     if filter_col != "None":
-        # Check if column is numeric
         if pd.api.types.is_numeric_dtype(df[filter_col]):
             min_val = float(df[filter_col].min())
             max_val = float(df[filter_col].max())
-            # Ensure step is non-zero
             step = (max_val - min_val) / 100 if max_val > min_val else 0.1
 
-            # Create a double-ended slider
             rng = st.sidebar.slider(
                 f"Range for {filter_col}",
                 min_val,
@@ -138,7 +124,6 @@ if df is not None:
             )
             df = df[(df[filter_col] >= rng[0]) & (df[filter_col] <= rng[1])]
         else:
-            # Categorical/Text column
             unique_vals = df[filter_col].unique().tolist()
             selected_vals = st.sidebar.multiselect(
                 f"Select values for {filter_col}",
@@ -153,24 +138,26 @@ if df is not None:
     text_size = st.sidebar.slider("Text Size", min_value=6, max_value=24, value=10)
 
     # --- 6. Graph Range & Walls ---
+    # FIX: Use st.sidebar.number_input instead of st.number_input so these
+    # controls render in the sidebar and their values are always defined.
     st.sidebar.subheader("Graph Range & Walls")
     col1, col2 = st.sidebar.columns(2)
-
     with col1:
-        axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
+        axis_min = st.sidebar.number_input("Axis Min", value=-1.0, step=0.1)
     with col2:
-        axis_max = st.number_input("Axis Max", value=1.0, step=0.1)
+        axis_max = st.sidebar.number_input("Axis Max", value=1.0, step=0.1)
 
     show_walls = st.sidebar.checkbox("Show Zero Walls (Quadrants)", value=True)
     dot_size = st.sidebar.slider("Dot Size", 1, 20, 5)
 
-    # Define hover data (Defaulting to all columns since UI was removed)
-    hover_data = all_cols
-
     # --- 7. Data Preparation ---
+    # FIX: Exclude already-mapped columns from hover_data to prevent Plotly conflicts.
+    mapped_cols = {x_axis, y_axis, z_axis, color_col, label_col}
+    hover_data = [col for col in all_cols if col not in mapped_cols]
+
     df_plot = df.copy()
 
-    # Apply text wrapping to all hover columns if they are strings
+    # Apply text wrapping only to non-axis string columns
     for col in hover_data:
         if col in df_plot.columns and df_plot[col].dtype == object:
             df_plot[col] = df_plot[col].apply(lambda x: wrap_text(x, width=50))
@@ -198,7 +185,6 @@ if df is not None:
                 j_idx = [1, 2]
                 k_idx = [2, 3]
 
-                # Wall Style
                 wall_style = dict(
                     color="gray",
                     opacity=0.2,
