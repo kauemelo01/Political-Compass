@@ -40,6 +40,15 @@ def wrap_text(text, width=50):
 def get_index(lst, val):
     return lst.index(val) if val in lst else 0
 
+# --- Helper: wrap long chart titles for mobile ---
+def wrap_title(x, y, z, max_len=28):
+    """Inserts a <br> before each axis name if the full title exceeds max_len chars."""
+    parts = [x, y, z]
+    full = "  ×  ".join(parts)
+    if len(full) <= max_len:
+        return full
+    return "<br>".join(parts)
+
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 
 DEFAULT_FILE_PATH = "political_compass.csv"
@@ -181,7 +190,7 @@ if df is not None:
             color=color_col,
             text=label_col,
             hover_data=all_cols,
-            title=f"{x_axis}  ×  {y_axis}  ×  {z_axis}",
+            title=wrap_title(x_axis, y_axis, z_axis),
         )
 
         # Zero-plane walls
@@ -231,7 +240,7 @@ if df is not None:
             ),
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True})
 
         # Raw data (optional)
         if show_raw:
