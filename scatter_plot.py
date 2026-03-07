@@ -146,10 +146,10 @@ if df is not None:
     with col2: axis_max = st.number_input("Axis Max", value= 1.0, step=0.1)
 
     show_walls = st.sidebar.checkbox("Show Zero Walls (Quadrants)", value=True)
-    dot_size = st.sidebar.slider("Dot Size", 1, 20, 5)
 
-    # Define hover data as default to all columns, but can be customized if needed
-    hover_data = all_cols
+    # --- 6b. Define hover data (exclude already-mapped axes) ---
+    mapped_cols = {x_axis, y_axis, z_axis, color_col, label_col}
+    hover_data = [col for col in all_cols if col not in mapped_cols]
 
     # --- 7. Data Preparation ---
     df_plot = df.copy()
