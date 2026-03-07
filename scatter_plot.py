@@ -6,54 +6,40 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # Set page configuration
-st.set_page_config(page_title="3D Political Compass Viewer", layout="wide")
-st.title("Interactive 3D Scatter Plot Dashboard")
+st.set_page_config(page_title="4D Political Compass Viewer", layout="wide")
+st.title("4D Political Compass Viewer")
 
 # --- 1. Load Data ---
 @st.cache_data
 def load_local_data(file_path):
     return pd.read_csv(file_path)
 
-
 # --- Helper: Text Wrapper ---
 def wrap_text(text, width=50):
-    if isinstance(text, str):
-        return "<br>".join(textwrap.wrap(text, width=width))
+    if isinstance(text, str): return "<br>".join(textwrap.wrap(text, width=width))
     return text
 
-
 # --- FILE LOADING LOGIC ---
-# Using the absolute path structure from your environment
 DEFAULT_FILE_PATH = "political_compass.csv"
-
-# Sidebar for controls
 st.sidebar.header("Data Configuration")
-uploaded_file = st.sidebar.file_uploader(
-    "Upload your CSV (Overrides default)", type=["csv"]
-)
-
+uploaded_file = st.sidebar.file_uploader("Upload your CSV (Overrides default)", type=["csv"])
 df = None
 
 # 1. Try to load the uploaded file first
 if uploaded_file is not None:
-    try:
-        # Read the uploaded file directly. Bypassing the cache completely!
+    try:  # Read the uploaded file directly by bypassing the cache
         df = pd.read_csv(uploaded_file)
         st.sidebar.success("Successfully loaded uploaded file.")
     except Exception as e:
         st.sidebar.error(f"Error reading uploaded file: {e}")
         st.stop()
 
-# 2. If no upload, try to load the default absolute path
-else:
-    try:
-        # Use the cached function ONLY for the local file
+else:  # 2. If no upload, try to load the default absolute path
+    try:  # Use the cached function only for the local file
         df = load_local_data(DEFAULT_FILE_PATH)
         st.sidebar.success("Automatically loaded local file.")
     except FileNotFoundError:
-        st.info(
-            f"Could not find **{DEFAULT_FILE_PATH}**. Please upload a CSV file to continue."
-        )
+        st.info(f"Could not find **{DEFAULT_FILE_PATH}**. Please upload a CSV file to continue.")
         st.stop()  # Stops the app from crashing while waiting for a file
 
 # --- MAIN DASHBOARD LOGIC ---
@@ -99,20 +85,14 @@ if df is not None:
         show_pos_y = "+Y" in selected_octant
         show_pos_z = "+Z" in selected_octant
 
-        if show_pos_x:
-            df = df[df[x_axis] >= 0]
-        else:
-            df = df[df[x_axis] < 0]
+        if show_pos_x: df = df[df[x_axis] >= 0]
+        else: df = df[df[x_axis] < 0]
 
-        if show_pos_y:
-            df = df[df[y_axis] >= 0]
-        else:
-            df = df[df[y_axis] < 0]
+        if show_pos_y: df = df[df[y_axis] >= 0]
+        else: df = df[df[y_axis] < 0]
 
-        if show_pos_z:
-            df = df[df[z_axis] >= 0]
-        else:
-            df = df[df[z_axis] < 0]
+        if show_pos_z: df = df[df[z_axis] >= 0]
+        else: df = df[df[z_axis] < 0]
 
     # --- 4. Dynamic Column Filter ---
     st.sidebar.subheader("Dynamic Data Filter")
@@ -125,6 +105,7 @@ if df is not None:
         if pd.api.types.is_numeric_dtype(df[filter_col]):
             min_val = float(df[filter_col].min())
             max_val = float(df[filter_col].max())
+            
             # Ensure step is non-zero
             step = (max_val - min_val) / 100 if max_val > min_val else 0.1
 
@@ -137,8 +118,8 @@ if df is not None:
                 step=step,
             )
             df = df[(df[filter_col] >= rng[0]) & (df[filter_col] <= rng[1])]
-        else:
-            # Categorical/Text column
+
+        else:  # Categorical/Text column
             unique_vals = df[filter_col].unique().tolist()
             selected_vals = st.sidebar.multiselect(
                 f"Select values for {filter_col}",
@@ -156,15 +137,13 @@ if df is not None:
     st.sidebar.subheader("Graph Range & Walls")
     col1, col2 = st.sidebar.columns(2)
 
-    with col1:
-        axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
-    with col2:
-        axis_max = st.number_input("Axis Max", value=1.0, step=0.1)
+    with col1: axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
+    with col2: axis_max = st.number_input("Axis Max", value=1.0, step=0.1)
 
     show_walls = st.sidebar.checkbox("Show Zero Walls (Quadrants)", value=True)
     dot_size = st.sidebar.slider("Dot Size", 1, 20, 5)
 
-    # Define hover data (Defaulting to all columns since UI was removed)
+    # Define hover data: default to all columns
     hover_data = all_cols
 
     # --- 7. Data Preparation ---
@@ -179,8 +158,8 @@ if df is not None:
     if x_axis and y_axis and z_axis:
         if len(df_plot) == 0:
             st.warning("No data found with the current filters.")
-        else:
-            # 8a. Create Base Scatter
+        
+        else:  # 8a. Create Base Scatter
             fig = px.scatter_3d(
                 df_plot,
                 x=x_axis,
@@ -263,5 +242,4 @@ if df is not None:
             st.plotly_chart(fig, use_container_width=True)
 
             # Show filtered raw data
-            with st.expander("View Raw Data"):
-                st.dataframe(df)
+            with st.expander("View Raw Data"): st.dataframe(df)
