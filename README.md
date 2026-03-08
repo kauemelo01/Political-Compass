@@ -83,7 +83,7 @@ The dataset (`political_compass.csv`) has the following columns:
 
 | Column | Type | Description |
 |---|---|---|
-| `Ideology` | `string` | Name of the entry |
+| `Entry` | `string` | Name of the entry |
 | `Type` | `string` | One of the five entry types listed above |
 | `Description` | `string` | Narrative explanation of the entry and its scores |
 | `Legalism_Jusnaturalism` | `float [-1, 1]` | Score on Dimension 1 |
