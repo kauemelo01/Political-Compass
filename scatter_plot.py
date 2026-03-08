@@ -1,5 +1,4 @@
 import textwrap
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -36,8 +35,7 @@ st.title("4D Political Compass")
 
 # --- Helper: Text Wrapper ---
 def wrap_text(text, width=50):
-    if isinstance(text, str):
-        return "<br>".join(textwrap.wrap(text, width=width))
+    if isinstance(text, str): return "<br>".join(textwrap.wrap(text, width=width))
     return text
 
 # --- Helper: default column index ---
@@ -99,12 +97,9 @@ if df is not None:
     # ── Tab 1: Axes ───────────────────────────────────────────────────────────
     with tab_axes:
         col1, col2, col3 = st.columns(3)
-        with col1:
-            x_axis = st.selectbox("X-Axis", numeric_cols, index=get_index(numeric_cols, x_def))
-        with col2:
-            y_axis = st.selectbox("Y-Axis", numeric_cols, index=get_index(numeric_cols, y_def))
-        with col3:
-            z_axis = st.selectbox("Z-Axis", numeric_cols, index=get_index(numeric_cols, z_def))
+        with col1: x_axis = st.selectbox("X-Axis", numeric_cols, index=get_index(numeric_cols, x_def))
+        with col2: y_axis = st.selectbox("Y-Axis", numeric_cols, index=get_index(numeric_cols, y_def))
+        with col3: z_axis = st.selectbox("Z-Axis", numeric_cols, index=get_index(numeric_cols, z_def))
 
         color_col = st.selectbox("Color by", all_cols, index=get_index(all_cols, "Reformist_Revolutionary"))
         label_col = st.selectbox("Label column", all_cols, index=0)
@@ -138,11 +133,11 @@ if df is not None:
     with tab_display:
         col_a, col_b = st.columns(2)
         with col_a:
-            axis_min = st.number_input("Axis Min", value=-1.0, step=0.1)
+            axis_min  = st.number_input("Axis Min", value=-1.0, step=0.1)
             dot_size  = st.slider("Dot size", 1, 20, 5)
         with col_b:
-            axis_max   = st.number_input("Axis Max", value=1.0, step=0.1)
-            text_size  = st.slider("Text size", 6, 24, 10)
+            axis_max  = st.number_input("Axis Max", value= 1.0, step=0.1)
+            text_size = st.slider("Text size", 6, 24, 10)
 
         show_walls  = st.checkbox("Show zero-planes (octant walls)", value=True)
 
@@ -188,12 +183,39 @@ if df is not None:
             if col in df_plot.columns and df_plot[col].dtype == object:
                 df_plot[col] = df_plot[col].apply(lambda x: wrap_text(x, width=50))
 
+        # ── Custom hover data: build ordered customdata array ─────────────────
+        # Order: Ideology (bold), Type, X, Y, Z, Color axis, Description
+        # %{x/%{y}/%{z} are native; everything else goes through customdata.
+        hover_cols = ["Ideology", "Type", color_col, "Description"]
+        # Deduplicate while preserving order (color_col may overlap with others)
+        seen = set()
+        hover_cols_deduped = [c for c in hover_cols if not (c in seen or seen.add(c))]
+        customdata_array = df_plot[[c for c in hover_cols_deduped if c in df_plot.columns]].values
+
+        # Map column name → customdata index
+        cd_idx = {col: i for i, col in enumerate(c for c in hover_cols_deduped if c in df_plot.columns)}
+
+        ideology_ref  = f"%{{customdata[{cd_idx['Ideology']}]}}"  if "Ideology"    in cd_idx else "—"
+        type_ref      = f"%{{customdata[{cd_idx['Type']}]}}"      if "Type"        in cd_idx else "—"
+        color_ref     = f"%{{customdata[{cd_idx[color_col]}]}}"   if color_col     in cd_idx else "—"
+        desc_ref      = f"%{{customdata[{cd_idx['Description']}]}}" if "Description" in cd_idx else "—"
+
+        hover_template = (
+            f"<b>{ideology_ref}</b><br>"
+            f"Type: {type_ref}<br>"
+            f"{x_axis}: %{{x}}<br>"
+            f"{y_axis}: %{{y}}<br>"
+            f"{z_axis}: %{{z}}<br>"
+            f"{color_col}: {color_ref}<br>"
+            f"<br>{desc_ref}"
+            "<extra></extra>"
+        )
+
         fig = px.scatter_3d(
             df_plot,
             x=x_axis, y=y_axis, z=z_axis,
             color=color_col,
             text=label_col,
-            hover_data=all_cols,
             title=wrap_title(x_axis, y_axis, z_axis),
         )
 
@@ -211,6 +233,8 @@ if df is not None:
         text_color = "white" if dark_mode else "black"
 
         fig.update_traces(
+            customdata=customdata_array,
+            hovertemplate=hover_template,
             marker=dict(size=dot_size),
             textposition="top center",
             textfont=dict(size=text_size, color=text_color),
@@ -248,28 +272,9 @@ if df is not None:
 
         st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "responsive": True})
 
-        # ── Mobile pinch-to-zoom: open standalone HTML in browser ────────────
-        # Streamlit's iframe is sandboxed at browser level — no CSS or config
-        # flag can enable pinch gestures through it. The only reliable fix is a
-        # self-contained HTML file opened directly in the mobile browser.
-        standalone_html = fig.to_html(
-            include_plotlyjs=True,   # fully self-contained, no CDN needed
-            full_html=True,
-            config={"scrollZoom": True, "responsive": True},
-        )
-        st.download_button(
-            label="📱 Open in browser (enables pinch-to-zoom)",
-            data=standalone_html,
-            file_name="political_compass.html",
-            mime="text/html",
-            help="Download and open this file in your mobile browser for full pinch-to-zoom support.",
-            use_container_width=True,
-        )
-
         # Raw data (optional)
         if show_raw:
-            with tab_data:
-                st.dataframe(df_filtered, use_container_width=True)
+            with tab_data: st.dataframe(df_filtered, use_container_width=True)
 
     # ── Footer ─────────────────────────────────────────────────────────────────
     st.caption(f"Showing **{len(df_filtered)}** of **{len(df)}** entries")
