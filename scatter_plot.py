@@ -4,6 +4,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit_theme import st_theme
+
+theme = st_theme() or {}  # fallback to empty dict if None
+dark_mode = (theme.get("base", "") == "dark")
 
 # --- Page Config ---
 st.set_page_config(
@@ -141,7 +145,6 @@ if df is not None:
             text_size  = st.slider("Text size", 6, 24, 10)
 
         show_walls  = st.checkbox("Show zero-planes (octant walls)", value=True)
-        dark_mode   = st.checkbox("Dark mode (white text)", value=False)
 
         # Chart height — key for mobile: portrait screens need a shorter plot
         chart_height = st.slider("Chart height (px)", 350, 900, 520, step=10)
@@ -243,7 +246,7 @@ if df is not None:
             ),
         )
 
-        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "responsive": True})
+        st.plotly_chart(fig, width="stretch", config={"scrollZoom": True, "responsive": True})
 
         # ── Mobile pinch-to-zoom: open standalone HTML in browser ────────────
         # Streamlit's iframe is sandboxed at browser level — no CSS or config
