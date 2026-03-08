@@ -42,14 +42,6 @@ def wrap_text(text, width=50):
 def get_index(lst, val):
     return lst.index(val) if val in lst else 0
 
-# --- Helper: wrap long chart titles for mobile ---
-def wrap_title(x, y, z, max_len=28):
-    """Inserts a <br> before each axis name if the full title exceeds max_len chars."""
-    parts = [x, y, z]
-    full = "  ×  ".join(parts)
-    if len(full) <= max_len:
-        return full
-    return "<br>".join(parts)
 
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 
@@ -216,7 +208,7 @@ if df is not None:
             x=x_axis, y=y_axis, z=z_axis,
             color=color_col,
             text=label_col,
-            title=wrap_title(x_axis, y_axis, z_axis),
+            title=dict(text="<br>".join([x_axis, y_axis, z_axis]), x=0.5, xanchor="center"),
         )
 
         # Zero-plane walls
@@ -253,10 +245,9 @@ if df is not None:
                 camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
             ),
             margin=dict(l=0, r=0, b=80, t=36),
-            title_x=0.5,               # center the chart title
             coloraxis_colorbar=dict(
                 orientation="h",       # horizontal bar below the chart
-                x=0.5, xanchor="center",
+                x=0.5,   xanchor="center",
                 y=-0.12, yanchor="top",
                 len=0.6,               # 60% of plot width
                 thickness=12,
@@ -266,7 +257,7 @@ if df is not None:
             legend=dict(
                 orientation="h",       # horizontal legend — bottom-centered for categorical axes
                 yanchor="top",    y=-0.08,
-                xanchor="center", x=0.5,
+                xanchor="center", x= 0.5,
                 font=dict(size=9),
             ),
         )
