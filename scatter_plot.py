@@ -184,9 +184,9 @@ if df is not None:
                 df_plot[col] = df_plot[col].apply(lambda x: wrap_text(x, width=50))
 
         # ── Custom hover data: build ordered customdata array ─────────────────
-        # Order: Ideology (bold), Type, X, Y, Z, Color axis, Description
+        # Order: Entry (bold), Type, X, Y, Z, Color axis, Description
         # %{x/%{y}/%{z} are native; everything else goes through customdata.
-        hover_cols = ["Ideology", "Type", color_col, "Description"]
+        hover_cols = ["Entry", "Type", color_col, "Description"]
         # Deduplicate while preserving order (color_col may overlap with others)
         seen = set()
         hover_cols_deduped = [c for c in hover_cols if not (c in seen or seen.add(c))]
@@ -195,13 +195,13 @@ if df is not None:
         # Map column name → customdata index
         cd_idx = {col: i for i, col in enumerate(c for c in hover_cols_deduped if c in df_plot.columns)}
 
-        ideology_ref  = f"%{{customdata[{cd_idx['Ideology']}]}}"  if "Ideology"    in cd_idx else "—"
-        type_ref      = f"%{{customdata[{cd_idx['Type']}]}}"      if "Type"        in cd_idx else "—"
-        color_ref     = f"%{{customdata[{cd_idx[color_col]}]}}"   if color_col     in cd_idx else "—"
-        desc_ref      = f"%{{customdata[{cd_idx['Description']}]}}" if "Description" in cd_idx else "—"
+        entry_ref = f"%{{customdata[{cd_idx['Entry']}]}}"       if "Entry"       in cd_idx else "—"
+        type_ref  = f"%{{customdata[{cd_idx['Type']}]}}"        if "Type"        in cd_idx else "—"
+        color_ref = f"%{{customdata[{cd_idx[color_col]}]}}"     if color_col     in cd_idx else "—"
+        desc_ref  = f"%{{customdata[{cd_idx['Description']}]}}" if "Description" in cd_idx else "—"
 
         hover_template = (
-            f"<b>{ideology_ref}</b><br>"
+            f"<b>{entry_ref}</b><br>"
             f"Type: {type_ref}<br>"
             f"{x_axis}: %{{x}}<br>"
             f"{y_axis}: %{{y}}<br>"
@@ -253,6 +253,7 @@ if df is not None:
                 camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
             ),
             margin=dict(l=0, r=0, b=80, t=36),
+            title_x=0.5,               # center the chart title
             coloraxis_colorbar=dict(
                 orientation="h",       # horizontal bar below the chart
                 x=0.5, xanchor="center",
@@ -263,9 +264,9 @@ if df is not None:
                 tickfont=dict(size=8),
             ),
             legend=dict(
-                orientation="h",       # horizontal legend — saves vertical space on mobile
-                yanchor="bottom", y=1.01,
-                xanchor="right",  x=1,
+                orientation="h",       # horizontal legend — bottom-centered for categorical axes
+                yanchor="top",    y=-0.08,
+                xanchor="center", x=0.5,
                 font=dict(size=9),
             ),
         )
