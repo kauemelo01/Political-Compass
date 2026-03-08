@@ -42,7 +42,6 @@ def wrap_text(text, width=50):
 def get_index(lst, val):
     return lst.index(val) if val in lst else 0
 
-
 # ── DATA LOADING ─────────────────────────────────────────────────────────────
 
 DEFAULT_FILE_PATH = "political_compass.csv"
@@ -123,7 +122,7 @@ if df is not None:
 
     # ── Tab 3: Display ────────────────────────────────────────────────────────
     with tab_display:
-        col_a, col_b = st.columns(2)
+        col_a, col_b  = st.columns(2)
         with col_a:
             axis_min  = st.number_input("Axis Min", value=-1.0, step=0.1)
             dot_size  = st.slider("Dot size", 1, 20, 5)
@@ -146,9 +145,9 @@ if df is not None:
 
     # Octant
     if selected_octant != "All Data":
-        show_pos_x = "+X" in selected_octant
-        show_pos_y = "+Y" in selected_octant
-        show_pos_z = "+Z" in selected_octant
+        show_pos_x  = "+X" in selected_octant
+        show_pos_y  = "+Y" in selected_octant
+        show_pos_z  = "+Z" in selected_octant
         df_filtered = df_filtered[df_filtered[x_axis] >= 0] if show_pos_x else df_filtered[df_filtered[x_axis] < 0]
         df_filtered = df_filtered[df_filtered[y_axis] >= 0] if show_pos_y else df_filtered[df_filtered[y_axis] < 0]
         df_filtered = df_filtered[df_filtered[z_axis] >= 0] if show_pos_z else df_filtered[df_filtered[z_axis] < 0]
@@ -208,7 +207,7 @@ if df is not None:
             x=x_axis, y=y_axis, z=z_axis,
             color=color_col,
             text=label_col,
-            title=dict(text="<br>".join([x_axis, y_axis, z_axis]), x=0.5, xanchor="center"),
+            title="<br>".join([x_axis, y_axis, z_axis]),
         )
 
         # Zero-plane walls
@@ -245,6 +244,7 @@ if df is not None:
                 camera=dict(eye=dict(x=1.4, y=1.4, z=0.8)),
             ),
             margin=dict(l=0, r=0, b=80, t=36),
+            title=dict(x=0.5, xanchor="center"),
             coloraxis_colorbar=dict(
                 orientation="h",       # horizontal bar below the chart
                 x=0.5,   xanchor="center",
